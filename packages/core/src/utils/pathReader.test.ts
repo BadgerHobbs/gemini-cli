@@ -333,6 +333,36 @@ describe('readPathFromWorkspace', () => {
       expect(resultText).not.toContain('invisible');
       expect(mockFileService.filterFiles).toHaveBeenCalled();
     });
+
+    it('should read an ignored file if respectGitIgnore is false', async () => {
+      mock({
+        [CWD]: {
+          'ignored.txt': 'ignored content',
+        },
+      });
+      const mockFileService = {
+        filterFiles: vi.fn((files, opts) => {
+          if (opts?.respectGitIgnore) {
+            return [];
+          }
+          return files;
+        }),
+      } as unknown as FileDiscoveryService;
+      const config = createMockConfig(CWD, [], mockFileService);
+      // Hacky way to set respectGitIgnore
+      (config as any).respectGitIgnore = false;
+      (config as any).respectGeminiIgnore = false;
+
+      const result = await readPathFromWorkspace('ignored.txt', config);
+      expect(result).toEqual(['ignored content']);
+      expect(mockFileService.filterFiles).toHaveBeenCalledWith(
+        ['ignored.txt'],
+        {
+          respectGitIgnore: false,
+          respectGeminiIgnore: false,
+        },
+      );
+    });
   });
 
   it('should throw an error for an absolute path outside the workspace', async () => {
